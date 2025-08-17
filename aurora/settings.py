@@ -50,8 +50,8 @@ INSTALLED_APPS = [
     'apps.voice',
     'apps.nlp',
     'apps.lessons',
-    #'apps.sessions',
-    #'apps.web'
+    'apps.aurora_sessions',
+    'apps.web'
 ]
 
 MIDDLEWARE = [
