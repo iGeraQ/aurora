@@ -1,0 +1,254 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" x-data="homeState()" x-init="init()">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glish — Practica inglés por voz</title>
+  <meta name="description" content="Glish: un tutor de inglés por voz en tiempo real. Transcribe, corrige gramática y responde con voz." />
+
+  <!-- Tailwind (CDN para MVP; en prod compílalo) -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Alpine.js (interacciones ligeras) -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- HTMX (para vistas parciales en otras páginas) -->
+  <script defer src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <!-- Iconos (Heroicons) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .bg-grid {
+      background-image: linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px),
+                        linear-gradient(0deg, rgba(0,0,0,.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+  </style>
+</head>
+<body class="antialiased text-gray-800">
+  <!-- NAV -->
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center space-x-2 font-semibold">
+        <span class="text-indigo-600">Glish</span>
+        <span class="text-gray-400">·</span>
+        <span class="text-sm text-gray-500">Your voice. Your English.</span>
+      </a>
+      <nav class="hidden md:flex items-center space-x-6 text-sm">
+        <a href="#features" class="hover:text-indigo-600">Características</a>
+        <a href="#how" class="hover:text-indigo-600">Cómo funciona</a>
+        <a href="#faq" class="hover:text-indigo-600">FAQ</a>
+      </nav>
+      <div class="flex items-center space-x-3">
+        <a href="/practice/" class="hidden sm:inline-flex px-3 py-2 text-sm rounded-lg border hover:bg-gray-50">Práctica escrita</a>
+        <a href="/voice/" class="inline-flex px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Empezar práctica de voz</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-b from-indigo-50 to-white"></div>
+    <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+      <div class="grid md:grid-cols-2 gap-10 items-center">
+        <div>
+          <h1 class="text-3xl sm:text-5xl font-extrabold leading-tight">
+            Practica inglés por <span class="text-indigo-600">voz</span> en segundos
+          </h1>
+          <p class="mt-4 text-lg text-gray-600">Transcripción en vivo, correcciones de gramática y respuesta hablada. Todo en una experiencia rápida con tu navegador.</p>
+
+          <div class="mt-8 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
+            <a href="/voice/" class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700">
+              <span class="mr-2" aria-hidden="true">🎙️</span> Empezar ahora
+            </a>
+            <button type="button" @click="openMicTest=true; checkMic()" class="inline-flex items-center justify-center px-5 py-3 rounded-xl border hover:bg-gray-50">
+              Probar micrófono
+            </button>
+          </div>
+
+          <!-- Mic status -->
+          <div class="mt-6 flex items-center space-x-2 text-sm" x-show="micChecked" x-cloak>
+            <span :class="micGranted ? 'text-green-600' : 'text-red-600'" class="font-semibold" x-text="micGranted ? 'Micrófono disponible' : 'No hay permisos de micrófono'" ></span>
+            <template x-if="!micGranted">
+              <span class="text-gray-500">· Concede acceso al micrófono en tu navegador.</span>
+            </template>
+          </div>
+        </div>
+
+        <div class="relative">
+          <div class="rounded-2xl border bg-white shadow-sm p-6 bg-grid">
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-gray-500">Demo</div>
+              <div class="text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-600" x-text="wsStatus"></div>
+            </div>
+            <div class="mt-4 space-y-3 text-sm">
+              <div class="p-3 rounded border bg-white">
+                <div class="text-gray-400">Transcripción en vivo</div>
+                <div class="font-medium mt-1" x-text="demo.partial || 'Hello, I would like a coffee…' "></div>
+              </div>
+              <div class="p-3 rounded border bg-white">
+                <div class="text-gray-400">Corrección</div>
+                <div class="mt-1">
+                  <span class="line-through text-red-500">a coffee</span>
+                  <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded">some coffee</span>
+                  <span class="ml-2 text-gray-500">Uncountable noun</span>
+                </div>
+              </div>
+              <div class="p-3 rounded border bg-white">
+                <div class="text-gray-400">Respuesta (TTS)</div>
+                <audio controls class="mt-2 w-full">
+                  <source src="" type="audio/mp3" />
+                </audio>
+              </div>
+            </div>
+            <div class="mt-4 text-xs text-gray-500">
+              * La demo es ilustrativa. La práctica real corre en <code>/voice/</code>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="py-16 border-t">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold">Todo lo que necesitas para mejorar</h2>
+      <p class="mt-2 text-gray-600">Diseñado para latencia baja y feedback útil.</p>
+
+      <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="p-5 rounded-xl border bg-white">
+          <div class="text-indigo-600">⚡</div>
+          <h3 class="mt-2 font-semibold">Tiempo real</h3>
+          <p class="text-sm text-gray-600 mt-1">WebSocket con parciales y finales del ASR. Sin esperas.</p>
+        </div>
+        <div class="p-5 rounded-xl border bg-white">
+          <div class="text-indigo-600">🧠</div>
+          <h3 class="mt-2 font-semibold">Corrección objetiva</h3>
+          <p class="text-sm text-gray-600 mt-1">Motor de gramática (LanguageTool) con reglas claras.</p>
+        </div>
+        <div class="p-5 rounded-xl border bg-white">
+          <div class="text-indigo-600">🗣️</div>
+          <h3 class="mt-2 font-semibold">Respuesta hablada</h3>
+          <p class="text-sm text-gray-600 mt-1">Generación de voz con TTS (Polly) en chunks.</p>
+        </div>
+        <div class="p-5 rounded-xl border bg-white">
+          <div class="text-indigo-600">🔎</div>
+          <h3 class="mt-2 font-semibold">Ejercicios similares</h3>
+          <p class="text-sm text-gray-600 mt-1">Sugerencias vía pgvector según lo que dijiste.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" class="py-16 border-t">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold">¿Cómo funciona?</h2>
+      <div class="mt-8 grid md:grid-cols-3 gap-6">
+        <div class="p-6 rounded-xl border bg-white">
+          <div class="text-indigo-600 font-bold">1</div>
+          <h3 class="mt-2 font-semibold">Habla</h3>
+          <p class="text-sm text-gray-600 mt-1">Capturamos audio y lo enviamos en pequeños frames por WebSocket.</p>
+        </div>
+        <div class="p-6 rounded-xl border bg-white">
+          <div class="text-indigo-600 font-bold">2</div>
+          <h3 class="mt-2 font-semibold">Te leemos</h3>
+          <p class="text-sm text-gray-600 mt-1">ASR transcribe en vivo y LanguageTool sugiere mejoras.</p>
+        </div>
+        <div class="p-6 rounded-xl border bg-white">
+          <div class="text-indigo-600 font-bold">3</div>
+          <h3 class="mt-2 font-semibold">Te respondemos</h3>
+          <p class="text-sm text-gray-600 mt-1">El agente te contesta con una reformulación y la escuchas de inmediato.</p>
+        </div>
+      </div>
+      <div class="mt-8">
+        <a href="/voice/" class="inline-flex px-5 py-3 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700">Probar práctica de voz</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-16 border-t">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold">Preguntas frecuentes</h2>
+      <div class="mt-6 space-y-4">
+        <details class="group border rounded-lg p-4">
+          <summary class="cursor-pointer font-medium">¿Necesito instalar algo?</summary>
+          <p class="mt-2 text-gray-600">No, solo tu navegador con permiso de micrófono.</p>
+        </details>
+        <details class="group border rounded-lg p-4">
+          <summary class="cursor-pointer font-medium">¿Mi voz se guarda?</summary>
+          <p class="mt-2 text-gray-600">Puedes configurar si guardas audio/transcripción para mejorar tu progreso.</p>
+        </details>
+        <details class="group border rounded-lg p-4">
+          <summary class="cursor-pointer font-medium">¿Funciona sin internet?</summary>
+          <p class="mt-2 text-gray-600">Este MVP usa servicios en la nube para ASR/TTS, requiere conexión.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-10 border-t">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-between">
+      <p>© <span x-text="new Date().getFullYear()"></span> Glish. Todos los derechos reservados.</p>
+      <div class="space-x-4 mt-2 sm:mt-0">
+        <a href="#" class="hover:text-indigo-600">Privacidad</a>
+        <a href="#" class="hover:text-indigo-600">Términos</a>
+        <a href="mailto:hello@glish.app" class="hover:text-indigo-600">Contacto</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal prueba de micrófono -->
+  <div x-cloak x-show="openMicTest" class="fixed inset-0 z-40 flex items-center justify-center">
+    <div class="absolute inset-0 bg-black bg-opacity-40" @click="openMicTest=false"></div>
+    <div class="relative z-50 w-full max-w-lg mx-4 p-6 bg-white rounded-2xl shadow-xl">
+      <h3 class="text-lg font-semibold">Prueba de micrófono</h3>
+      <p class="mt-2 text-sm text-gray-600">Concede permiso al micrófono para verificar que todo funciona.</p>
+      <div class="mt-4">
+        <div class="text-sm" :class="micGranted ? 'text-green-700' : 'text-red-700'">
+          <template x-if="micChecked">
+            <span x-text="micGranted ? 'Permiso concedido. Puedes practicar.' : 'No se pudo acceder al micrófono.'"></span>
+          </template>
+          <template x-if="!micChecked">
+            <span>Esperando permiso…</span>
+          </template>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end space-x-2">
+        <button class="px-4 py-2 rounded-lg border hover:bg-gray-50" @click="openMicTest=false">Cerrar</button>
+        <a href="/voice/" class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700" :class="!micGranted && 'opacity-50 pointer-events-none'">Ir a práctica de voz</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function homeState(){
+      return {
+        wsStatus: 'offline',
+        demo: { partial: '' },
+        openMicTest: false,
+        micChecked: false,
+        micGranted: false,
+        init(){
+          // Demo: si tienes un endpoint de health WS, puedes actualizar wsStatus
+          this.wsStatus = 'listo';
+        },
+        async checkMic(){
+          this.micChecked = false;
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.micGranted = true;
+            this.micChecked = true;
+            // cierra de inmediato, solo es prueba
+            stream.getTracks().forEach(t => t.stop());
+          } catch (e) {
+            this.micGranted = false;
+            this.micChecked = true;
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
